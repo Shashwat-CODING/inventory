@@ -2,6 +2,7 @@ import { useInventory } from "@/context/InventoryContext";
 import { formatCurrency, getStatusBadgeClass, getStatusText, getSortIndicatorClass, filterItems, sortItems } from "@/utils/formatters";
 import { SortField, SortDirection, InventoryItem } from "@/types/inventory";
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 
 export default function InventoryTable() {
   const { 
@@ -19,6 +20,21 @@ export default function InventoryTable() {
   } = useInventory();
 
   const [, setLocation] = useLocation();
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Check if mobile view based on screen width
+  useEffect(() => {
+    const checkIfMobile = () => setIsMobile(window.innerWidth < 768);
+    
+    // Check on initial load
+    checkIfMobile();
+    
+    // Set up event listener for window resize
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Clean up event listener
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
   
   const handleClearFilters = () => {
     clearFilters();
@@ -44,14 +60,14 @@ export default function InventoryTable() {
 
   if (isLoading) {
     return (
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white shadow-md rounded-xl border border-slate-200 overflow-hidden animate-pulse">
         <div className="p-8 flex flex-col items-center justify-center">
           <div className="relative w-16 h-16 mb-4">
             <div className="absolute top-0 right-0 bottom-0 left-0 flex justify-center items-center">
-              <div className="h-10 w-10 border-t-2 border-b-2 border-blue-500 rounded-full animate-spin"></div>
+              <div className="h-10 w-10 border-t-2 border-b-2 border-indigo-500 rounded-full animate-spin"></div>
             </div>
             <div className="absolute top-0 right-0 bottom-0 left-0 flex justify-center items-center">
-              <div className="h-6 w-6 border-t-2 border-blue-600 rounded-full animate-spin"></div>
+              <div className="h-6 w-6 border-t-2 border-indigo-600 rounded-full animate-spin"></div>
             </div>
           </div>
           <h3 className="text-lg font-medium text-slate-800 mb-1">Loading Inventory Data</h3>
@@ -63,39 +79,89 @@ export default function InventoryTable() {
 
   if (sortedItems.length === 0) {
     return (
-      <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-white shadow-md rounded-xl border border-slate-200 overflow-hidden">
         <div className="py-12 flex flex-col items-center justify-center text-center px-4">
           <div className="relative">
             <div className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full animate-pulse"></div>
-            <div className="rounded-full bg-slate-100 p-6 mb-5 shadow-inner relative">
-              <i className="bx bx-package text-5xl text-slate-400"></i>
+            <div className="rounded-full bg-indigo-50 p-6 mb-5 shadow-sm relative border border-indigo-100">
+              <i className="bx bx-package text-indigo-400 text-4xl"></i>
             </div>
           </div>
-          
-          <h3 className="text-xl font-semibold text-slate-800 mb-2">No Inventory Items Found</h3>
-          <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-            {filters.search || filters.division || filters.status ? 
-              "There are no items matching your current search criteria. Try adjusting your filters or adding new inventory items." :
-              "Your inventory is currently empty. Start by adding your first inventory item to begin tracking your stock."}
+          <h3 className="text-lg font-medium text-slate-800 mb-2">No Inventory Items Found</h3>
+          <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+            {filters.search || filters.division || filters.status 
+              ? 'No items match your current filters. Try adjusting your search criteria or clearing filters.'
+              : 'There are no inventory items in the system yet. Get started by adding your first inventory item.'}
           </p>
-          
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            {(filters.search || filters.division || filters.status) && (
-              <button
-                className="px-4 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-colors shadow-sm flex items-center justify-center text-sm font-medium"
-                onClick={handleClearFilters}
-              >
-                <i className="bx bx-filter-alt text-slate-500 mr-2"></i>
-                Clear Filters
-              </button>
-            )}
-            
+          {(filters.search || filters.division || filters.status) ? (
             <button
-              className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-sm flex items-center justify-center text-sm font-medium"
+              onClick={handleClearFilters}
+              className="px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-700 hover:bg-slate-50 hover:border-indigo-200 hover:text-indigo-700 transition-all shadow-sm flex items-center text-sm"
+            >
+              <i className="bx bx-x text-slate-500 mr-2"></i>
+              Clear All Filters
+            </button>
+          ) : (
+            <button
               onClick={prepareAddItem}
+              className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all shadow-sm flex items-center text-sm"
             >
               <i className="bx bx-plus mr-2"></i>
               Add Inventory Item
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile card view for items
+  if (isMobile) {
+    return (
+      <div className="bg-white shadow-md rounded-xl border border-slate-200 overflow-hidden">
+        <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
+          <div className="flex items-center">
+            <i className="bx bx-list-ul text-indigo-500 mr-2"></i>
+            <span className="text-sm font-medium text-slate-700">Inventory Items ({sortedItems.length})</span>
+          </div>
+          <div className="text-xs text-slate-500">
+            {sorting.field && (
+              <span className="flex items-center">
+                Sorted by {sorting.field.toString().replace('_', ' ')} 
+                <i className={`bx ${sorting.direction === 'asc' ? 'bx-sort-up' : 'bx-sort-down'} ml-1 text-indigo-500`}></i>
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <div className="divide-y divide-slate-200">
+          {sortedItems.map((item) => (
+            <MobileItemCard 
+              key={item.id} 
+              item={item}
+              onView={() => viewItemDetails(item.id)}
+              onEdit={() => prepareEditItem(item)}
+              onAddStock={() => prepareAddStock(item)}
+              onSellStock={() => prepareSellStock(item)}
+              onDelete={() => prepareDeleteItem(item)}
+            />
+          ))}
+        </div>
+        
+        {/* Mobile pagination */}
+        <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+          <p className="text-xs text-slate-500">
+            Showing {sortedItems.length} of {items.length}
+          </p>
+          <div className="flex space-x-1">
+            <button className="p-1.5 text-slate-500 bg-white border border-slate-200 rounded disabled:opacity-50" disabled>
+              <i className="bx bx-chevron-left"></i>
+            </button>
+            <button className="p-1.5 text-white bg-indigo-600 border border-indigo-600 rounded">
+              1
+            </button>
+            <button className="p-1.5 text-slate-500 bg-white border border-slate-200 rounded">
+              <i className="bx bx-chevron-right"></i>
             </button>
           </div>
         </div>
@@ -103,41 +169,21 @@ export default function InventoryTable() {
     );
   }
 
+  // Desktop table view
   return (
-    <div className="bg-white shadow-sm rounded-xl border border-slate-200 overflow-hidden relative">
-      {/* Subtle gradient border at the top */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-400 to-blue-500 opacity-75"></div>
-      
-      {/* Table header with action buttons */}
-      <div className="p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-200 bg-slate-50/50">
-        <div>
-          <h3 className="text-lg font-semibold text-slate-800">Inventory Items</h3>
-          <p className="text-sm text-slate-500 mt-1">Manage and monitor your stock levels</p>
-        </div>
-        <div className="mt-3 sm:mt-0">
-          <button 
-            onClick={prepareAddItem}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-sm hover:bg-blue-700 transition-colors flex items-center text-sm font-medium"
-          >
-            <i className="bx bx-plus mr-2"></i>
-            Add New Item
-          </button>
-        </div>
-      </div>
-      
-      {/* Main table */}
-      <div className="overflow-x-auto custom-scrollbar">
-        <table className="min-w-full divide-y divide-slate-200 table-fixed">
-          <thead>
-            <tr className="bg-slate-50">
+    <div className="overflow-hidden bg-white shadow-md rounded-xl border border-slate-200">
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
+            <tr>
               <th 
                 scope="col" 
                 className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer border-b border-slate-200"
                 onClick={() => handleSort('item_code')}
               >
                 <div className="flex items-center">
-                  <span>Item Code</span>
-                  <i className={`bx ml-1.5 text-slate-400 ${getSortIndicatorClass('item_code', sorting.field, sorting.direction)}`}></i>
+                  <span>Code</span>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('item_code', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
               <th 
@@ -147,7 +193,7 @@ export default function InventoryTable() {
               >
                 <div className="flex items-center">
                   <span>Name</span>
-                  <i className={`bx ml-1.5 text-slate-400 ${getSortIndicatorClass('item_name', sorting.field, sorting.direction)}`}></i>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('item_name', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
 
@@ -158,7 +204,7 @@ export default function InventoryTable() {
               >
                 <div className="flex items-center justify-end">
                   <span>Stock</span>
-                  <i className={`bx ml-1.5 text-slate-400 ${getSortIndicatorClass('available_stock', sorting.field, sorting.direction)}`}></i>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('available_stock', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
               <th 
@@ -168,7 +214,7 @@ export default function InventoryTable() {
               >
                 <div className="flex items-center justify-end">
                   <span>MRP</span>
-                  <i className={`bx ml-1.5 text-slate-400 ${getSortIndicatorClass('mrp', sorting.field, sorting.direction)}`}></i>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('mrp', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
               <th 
@@ -203,34 +249,86 @@ export default function InventoryTable() {
 
       {/* Enhanced pagination with better styling */}
       <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-between bg-slate-50/50">
-        <div className="flex-1 flex justify-between sm:hidden">
-          <button className="px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
-            <i className="bx bx-chevron-left mr-1"></i> Previous
-          </button>
-          <button className="ml-3 px-4 py-2 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 shadow-sm">
-            Next <i className="bx bx-chevron-right ml-1"></i>
-          </button>
+        <div>
+          <p className="text-sm text-slate-700 flex items-center">
+            <i className="bx bx-data text-indigo-400 mr-2"></i>
+            Showing <span className="font-medium mx-1">1</span> to <span className="font-medium mx-1">{sortedItems.length}</span> of <span className="font-medium mx-1">{items.length}</span> items
+          </p>
         </div>
-        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-slate-700 flex items-center">
-              <i className="bx bx-data text-slate-400 mr-2"></i>
-              Showing <span className="font-medium mx-1">1</span> to <span className="font-medium mx-1">{sortedItems.length}</span> of <span className="font-medium mx-1">{items.length}</span> items
-            </p>
+        <div>
+          <nav className="relative z-0 inline-flex shadow-sm rounded-md" aria-label="Pagination">
+            <button className="relative inline-flex items-center px-3 py-2 rounded-l-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
+              <i className="bx bx-chevron-left"></i>
+            </button>
+            <button className="relative inline-flex items-center px-4 py-2 border border-indigo-600 bg-indigo-600 text-sm font-medium text-white hover:bg-indigo-700 transition-colors">
+              1
+            </button>
+            <button className="relative inline-flex items-center px-3 py-2 rounded-r-md border border-slate-200 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">
+              <i className="bx bx-chevron-right"></i>
+            </button>
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Mobile card component for inventory items
+function MobileItemCard({ item, onView, onEdit, onAddStock, onSellStock, onDelete }: TableRowProps) {
+  const statusClass = getStatusBadgeClass(item);
+  const statusText = getStatusText(item);
+  const isLowStock = item.available_stock < 10;
+  
+  return (
+    <div className="p-4 bg-white hover:bg-slate-50 transition-all">
+      <div className="flex justify-between items-start mb-2">
+        <div>
+          <h3 className="font-medium text-slate-800">{item.item_name}</h3>
+          <div className="text-xs text-slate-500 mt-0.5 flex items-center">
+            <span className="mr-2">Code: {item.item_code}</span>
+            <span>Barcode: {item.barcode || 'N/A'}</span>
           </div>
-          <div>
-            <nav className="relative z-0 inline-flex shadow-sm rounded-md" aria-label="Pagination">
-              <button className="relative inline-flex items-center px-3 py-2 rounded-l-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" disabled>
-                <i className="bx bx-chevron-left"></i>
-              </button>
-              <button className="relative inline-flex items-center px-4 py-2 border border-blue-600 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
-                1
-              </button>
-              <button className="relative inline-flex items-center px-3 py-2 rounded-r-md border border-slate-300 bg-white text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors">
-                <i className="bx bx-chevron-right"></i>
-              </button>
-            </nav>
+        </div>
+        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-medium rounded-full ${statusClass}`}>
+          {statusText}
+        </span>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3 my-3">
+        <div className="bg-slate-50 p-2 rounded border border-slate-200">
+          <div className="text-xs text-slate-500">Stock</div>
+          <div className={`font-medium ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
+            {item.available_stock} {item.base_unit || 'Units'}
           </div>
+        </div>
+        
+        <div className="bg-slate-50 p-2 rounded border border-slate-200">
+          <div className="text-xs text-slate-500">Price</div>
+          <div className="font-medium text-slate-700">{formatCurrency(item.mrp)}</div>
+        </div>
+      </div>
+      
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
+        <div className="text-xs text-slate-500">
+          {item.division ? `Division: ${item.division}` : ''}
+        </div>
+        
+        <div className="flex space-x-1">
+          <button onClick={onView} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="View Details">
+            <i className="bx bx-info-circle"></i>
+          </button>
+          <button onClick={onEdit} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="Edit">
+            <i className="bx bx-edit"></i>
+          </button>
+          <button onClick={onAddStock} className="p-1.5 text-green-600 hover:bg-green-50 rounded-full transition-colors" title="Add Stock">
+            <i className="bx bx-plus-circle"></i>
+          </button>
+          <button onClick={onSellStock} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-full transition-colors" title="Sell Stock">
+            <i className="bx bx-minus-circle"></i>
+          </button>
+          <button onClick={onDelete} className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Delete">
+            <i className="bx bx-trash"></i>
+          </button>
         </div>
       </div>
     </div>
@@ -293,14 +391,14 @@ function TableRow({ item, onView, onEdit, onAddStock, onSellStock, onDelete }: T
       <td className="px-6 py-4 whitespace-nowrap text-center">
         <div className="flex items-center justify-center space-x-1">
           <button 
-            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors" 
+            className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" 
             onClick={onView}
             title="View Details"
           >
             <i className="bx bx-info-circle"></i>
           </button>
           <button 
-            className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors" 
+            className="p-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" 
             onClick={onEdit}
             title="Edit"
           >

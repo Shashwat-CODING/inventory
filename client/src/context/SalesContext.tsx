@@ -113,32 +113,87 @@ export function SalesProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<SalesState>(defaultState);
   const { toast } = useToast();
   
-  // Load held bills from localStorage on component mount
+  // Load held bills from database on component mount
   useEffect(() => {
-    try {
-      // Load held bills
-      const savedBills = localStorage.getItem('heldBills');
-      if (savedBills) {
-        const heldBills = JSON.parse(savedBills) as HeldBill[];
-        setState(prev => ({
-          ...prev,
-          heldSales: heldBills
-        }));
+    const fetchHeldBills = async () => {
+      try {
+        setState(prev => ({ ...prev, isLoading: true }));
+        
+        // Fetch bills from database API
+        const bills = await api.fetchHeldBills();
+        
+        if (bills && bills.length > 0) {
+          setState(prev => ({
+            ...prev,
+            heldSales: bills,
+            isLoading: false
+          }));
+        } else {
+          // If no bills in database, try to load from local storage as fallback
+          const savedBills = localStorage.getItem('heldBills');
+          if (savedBills) {
+            const localBills = JSON.parse(savedBills) as HeldBill[];
+            
+            // Store local bills to database
+            if (localBills.length > 0) {
+              for (const bill of localBills) {
+                await api.saveHeldBill(bill);
+              }
+              
+              setState(prev => ({
+                ...prev,
+                heldSales: localBills,
+                isLoading: false
+              }));
+              
+              // Clear localStorage after migrating to database
+              localStorage.removeItem('heldBills');
+            }
+          }
+        }
+        
+        // Legacy support for old format
+        const oldHeldBill = localStorage.getItem('heldBill');
+        if (oldHeldBill) {
+          try {
+            const heldSale = JSON.parse(oldHeldBill) as SaleFormData;
+            
+            // Create a new bill with this data
+            const timestamp = new Date().getTime();
+            const billId = `heldBill_${timestamp}`;
+            
+            const newBill: HeldBill = {
+              id: billId,
+              timestamp,
+              customerName: heldSale.customerName || "Customer",
+              data: heldSale
+            };
+            
+            // Save to database
+            await api.saveHeldBill(newBill);
+            
+            // Update state with this bill
+            setState(prev => ({
+              ...prev,
+              heldSale,
+              showHeldSalePrompt: true
+            }));
+            
+            // Remove from localStorage
+            localStorage.removeItem('heldBill');
+          } catch (e) {
+            console.error('Error migrating old held bill:', e);
+          }
+        }
+        
+        setState(prev => ({ ...prev, isLoading: false }));
+      } catch (error) {
+        console.error('Error loading held bills:', error);
+        setState(prev => ({ ...prev, isLoading: false }));
       }
-      
-      // Legacy support: Check for old single held bill format
-      const oldHeldBill = localStorage.getItem('heldBill');
-      if (oldHeldBill) {
-        const heldSale = JSON.parse(oldHeldBill) as SaleFormData;
-        setState(prev => ({
-          ...prev,
-          heldSale,
-          showHeldSalePrompt: true
-        }));
-      }
-    } catch (error) {
-      console.error('Error loading held bills:', error);
-    }
+    };
+    
+    fetchHeldBills();
   }, []);
 
   // Customer information update
@@ -494,8 +549,8 @@ export function SalesProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Hold the current bill in localStorage
-  const holdBill = () => {
+  // Hold the current bill in database
+  const holdBill = async () => {
     // Only hold bills with items
     if (state.saleFormData.items.length === 0) {
       toast({
@@ -507,40 +562,44 @@ export function SalesProvider({ children }: { children: ReactNode }) {
     }
     
     try {
+      setState(prev => ({ ...prev, isLoading: true }));
+      
       // Create a unique ID for this held bill
       const timestamp = new Date().getTime();
       const billId = `heldBill_${timestamp}`;
       
       // Create a bill with timestamp and data
-      const billToHold = {
+      const billToHold: HeldBill = {
         id: billId,
         timestamp,
         customerName: state.saleFormData.customerName || "Customer",
         data: state.saleFormData
       };
       
-      // Get existing held bills
-      let heldBills = [];
-      const savedBills = localStorage.getItem('heldBills');
-      if (savedBills) {
-        heldBills = JSON.parse(savedBills);
+      // Save to database
+      const result = await api.saveHeldBill(billToHold);
+      
+      if (result.success) {
+        // Update local state with new bill
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          heldSales: [...prev.heldSales, billToHold]
+        }));
+        
+        toast({
+          title: "Bill Held",
+          description: "Your bill has been saved and can be resumed later",
+        });
+        
+        // Reset the form for a new sale
+        resetSaleForm();
+      } else {
+        throw new Error("Failed to save bill to database");
       }
-      
-      // Add the new bill to the list
-      heldBills.push(billToHold);
-      
-      // Save the updated list
-      localStorage.setItem('heldBills', JSON.stringify(heldBills));
-      
-      toast({
-        title: "Bill Held",
-        description: "Your bill has been saved and can be resumed later",
-      });
-      
-      // Reset the form for a new sale
-      resetSaleForm();
     } catch (error) {
       console.error('Error holding bill:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
       toast({
         title: "Error",
         description: "Failed to hold the bill",
@@ -550,8 +609,10 @@ export function SalesProvider({ children }: { children: ReactNode }) {
   };
   
   // Resume a held bill
-  const resumeHeldBill = (bill?: HeldBill) => {
+  const resumeHeldBill = async (bill?: HeldBill) => {
     try {
+      setState(prev => ({ ...prev, isLoading: true }));
+      
       if (bill) {
         // If a specific bill is provided (from the held bills list)
         setState(prev => ({
@@ -560,16 +621,15 @@ export function SalesProvider({ children }: { children: ReactNode }) {
           showHeldSalesList: false
         }));
         
-        // Get existing held bills
-        let heldBills = [];
-        const savedBills = localStorage.getItem('heldBills');
-        if (savedBills) {
-          heldBills = JSON.parse(savedBills);
-          // Remove this bill from the list
-          heldBills = heldBills.filter((b: HeldBill) => b.id !== bill.id);
-          // Save the updated list
-          localStorage.setItem('heldBills', JSON.stringify(heldBills));
-        }
+        // Delete the bill from database
+        await api.deleteHeldBill(bill.id);
+        
+        // Update local state to remove the bill
+        setState(prev => ({
+          ...prev,
+          isLoading: false,
+          heldSales: prev.heldSales.filter(b => b.id !== bill.id)
+        }));
         
         toast({
           title: "Bill Resumed",
@@ -581,19 +641,20 @@ export function SalesProvider({ children }: { children: ReactNode }) {
           ...prev,
           saleFormData: state.heldSale as SaleFormData,
           heldSale: null,
-          showHeldSalePrompt: false
+          showHeldSalePrompt: false,
+          isLoading: false
         }));
-        
-        // Remove the held bill from localStorage
-        localStorage.removeItem('heldBill');
         
         toast({
           title: "Bill Resumed",
           description: "Your held bill has been restored",
         });
+      } else {
+        setState(prev => ({ ...prev, isLoading: false }));
       }
     } catch (error) {
       console.error('Error resuming held bill:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
       toast({
         title: "Error",
         description: "Failed to resume the held bill",
@@ -613,14 +674,17 @@ export function SalesProvider({ children }: { children: ReactNode }) {
   // Load a specific held bill by ID
   const loadHeldBill = (billId: string) => {
     try {
-      const savedBills = localStorage.getItem('heldBills');
-      if (savedBills) {
-        const heldBills = JSON.parse(savedBills);
-        const bill = heldBills.find((b: HeldBill) => b.id === billId);
-        
-        if (bill) {
-          resumeHeldBill(bill);
-        }
+      // Find the bill in the current state
+      const bill = state.heldSales.find((b: HeldBill) => b.id === billId);
+      
+      if (bill) {
+        resumeHeldBill(bill);
+      } else {
+        toast({
+          title: "Bill Not Found",
+          description: "The requested bill could not be found",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('Error loading held bill:', error);
@@ -633,29 +697,31 @@ export function SalesProvider({ children }: { children: ReactNode }) {
   };
 
   // Delete a held bill by ID
-  const deleteHeldBill = (billId: string) => {
+  const deleteHeldBill = async (billId: string) => {
     try {
-      const savedBills = localStorage.getItem('heldBills');
-      if (savedBills) {
-        let heldBills = JSON.parse(savedBills);
-        // Filter out the bill to delete
-        heldBills = heldBills.filter((b: HeldBill) => b.id !== billId);
-        // Save the updated list
-        localStorage.setItem('heldBills', JSON.stringify(heldBills));
-        
-        // Update state with the remaining bills
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      // Call the API to delete the bill from the database
+      const result = await api.deleteHeldBill(billId);
+      
+      if (result.success) {
+        // Update local state to remove the bill
         setState(prev => ({
           ...prev,
-          heldSales: heldBills
+          isLoading: false,
+          heldSales: prev.heldSales.filter(b => b.id !== billId)
         }));
         
         toast({
           title: "Bill Deleted",
           description: "The held bill has been removed",
         });
+      } else {
+        throw new Error("Failed to delete bill from database");
       }
     } catch (error) {
       console.error('Error deleting held bill:', error);
+      setState(prev => ({ ...prev, isLoading: false }));
       toast({
         title: "Error",
         description: "Failed to delete the held bill",
