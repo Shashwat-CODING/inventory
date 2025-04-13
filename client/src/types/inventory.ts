@@ -1,41 +1,45 @@
 export interface InventoryItem {
   id: number;
-  item_code: string;
-  item_name: string;
-  division: string;
-  vertical: string;
-  brand: string;
-  opening_stock: number;
-  available_stock: number;
-  mrp: number;
-  cost_price: number;
-  gst_percentage: number;
+  multi_itemdivision: string;
+  divisions: string;
+  mcode: string;
+  menucode: string;
+  desca: string;
   barcode: string;
-  exp_date: string;
-  mfg_date: string;
-  batch: string;
+  unit: string;
+  isvat: number;
+  mrp: string | number;
+  gst: string | number;
+  cess: string | number;
+  gweight: string | number;
+  nweight: string | number;
+  mcat: string;
+  brand: string;
+  item_summary: string;
   warehouse: string;
-  base_unit: string;
+  stock: string | number;
   status: string;
 }
 
 export interface NewInventoryItem {
-  item_code: string;
-  item_name: string;
-  division: string;
-  vertical: string;
-  brand: string;
-  opening_stock: number;
-  available_stock: number;
-  mrp: number;
-  cost_price: number;
-  gst_percentage: number;
+  multi_itemdivision: string;
+  divisions: string;
+  mcode: string;
+  menucode: string;
+  desca: string;
   barcode: string;
-  exp_date: string;
-  mfg_date: string;
-  batch: string;
+  unit: string;
+  isvat: number;
+  mrp: number;
+  gst: number;
+  cess: number;
+  gweight: number;
+  nweight: number;
+  mcat: string;
+  brand: string;
+  item_summary: string;
   warehouse: string;
-  base_unit: string;
+  stock: number;
   status: string;
 }
 

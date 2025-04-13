@@ -7,10 +7,8 @@ import {
 import { Sale, SaleItem, SaleFormData } from "../types/sales";
 import { HeldBill } from "../context/SalesContext";
 
-// For external inventory API
-const EXTERNAL_API_BASE_URL = "https://inventory-management-mu-azure.vercel.app/api";
-// For local server endpoints
-const LOCAL_API_BASE_URL = "/api";
+// We now use our own backend for everything
+const API_BASE_URL = "/api";
 
 // Helper function to handle API errors
 async function handleApiResponse<T>(response: Response, errorMessage: string): Promise<T> {
@@ -28,13 +26,29 @@ async function handleApiResponse<T>(response: Response, errorMessage: string): P
 
 // Get all inventory items
 export async function fetchInventoryItems(): Promise<InventoryItem[]> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory`);
-  return handleApiResponse<InventoryItem[]>(response, "Failed to fetch inventory items");
+  try {
+    console.log("Fetching inventory items from:", `${API_BASE_URL}/inventory`);
+    const response = await fetch(`${API_BASE_URL}/inventory`);
+    console.log("Inventory API response status:", response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("API Error Response:", errorText);
+      throw new Error(`Failed to fetch inventory items: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log("Inventory data received:", data ? "Data received" : "No data");
+    return data;
+  } catch (error) {
+    console.error("Error fetching inventory items:", error);
+    return [];
+  }
 }
 
 // Get a single inventory item by ID
 export async function fetchInventoryItem(id: number): Promise<InventoryItem> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/${id}`);
+  const response = await fetch(`${API_BASE_URL}/inventory/${id}`);
   return handleApiResponse<InventoryItem>(response, `Failed to fetch inventory item ${id}`);
 }
 
@@ -42,7 +56,7 @@ export async function fetchInventoryItem(id: number): Promise<InventoryItem> {
 export async function createInventoryItem(
   item: NewInventoryItem,
 ): Promise<InventoryItem> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory`, {
+  const response = await fetch(`${API_BASE_URL}/inventory`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -58,7 +72,7 @@ export async function updateInventoryItem(
   id: number,
   item: Partial<InventoryItem>,
 ): Promise<InventoryItem> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/inventory/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -71,7 +85,7 @@ export async function updateInventoryItem(
 
 // Delete an inventory item
 export async function deleteInventoryItem(id: number): Promise<{ message: string }> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/${id}`, {
+  const response = await fetch(`${API_BASE_URL}/inventory/${id}`, {
     method: "DELETE",
   });
 
@@ -83,7 +97,7 @@ export async function addStock(
   id: number,
   data: StockAdjustment,
 ): Promise<InventoryItem> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/${id}/add-stock`, {
+  const response = await fetch(`${API_BASE_URL}/inventory/${id}/add-stock`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -99,7 +113,7 @@ export async function sellStock(
   id: number,
   data: StockAdjustment,
 ): Promise<InventoryItem> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/${id}/sell`, {
+  const response = await fetch(`${API_BASE_URL}/inventory/${id}/sell`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -119,7 +133,7 @@ export async function bulkImport(data: FormData): Promise<{ message: string }> {
     const jsonData = data.get('data') as string;
     
     // Send the JSON data directly in the request body
-    const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/bulk-import`, {
+    const response = await fetch(`${API_BASE_URL}/inventory/bulk-import`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -130,7 +144,7 @@ export async function bulkImport(data: FormData): Promise<{ message: string }> {
     return handleApiResponse<{ message: string }>(response, "Failed to import inventory items");
   } else {
     // For CSV or other formats, send as FormData
-    const response = await fetch(`${EXTERNAL_API_BASE_URL}/inventory/bulk-import`, {
+    const response = await fetch(`${API_BASE_URL}/inventory/bulk-import`, {
       method: "POST",
       body: data,
     });
@@ -141,7 +155,7 @@ export async function bulkImport(data: FormData): Promise<{ message: string }> {
 
 // Reset database
 export async function resetDatabase(): Promise<{ message: string }> {
-  const response = await fetch(`${EXTERNAL_API_BASE_URL}/reset`, {
+  const response = await fetch(`/reset`, {
     method: "POST",
   });
 
@@ -151,7 +165,7 @@ export async function resetDatabase(): Promise<{ message: string }> {
 // Save a held bill to the database
 export async function saveHeldBill(heldBill: HeldBill): Promise<{ success: boolean }> {
   try {
-    const response = await fetch(`${LOCAL_API_BASE_URL}/held-bills`, {
+    const response = await fetch(`${API_BASE_URL}/held-bills`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -174,7 +188,7 @@ export async function saveHeldBill(heldBill: HeldBill): Promise<{ success: boole
 // Get all held bills from the database
 export async function fetchHeldBills(): Promise<HeldBill[]> {
   try {
-    const response = await fetch(`${LOCAL_API_BASE_URL}/held-bills`);
+    const response = await fetch(`${API_BASE_URL}/held-bills`);
     const result = await handleApiResponse<{ success: boolean, bills: any[] }>(
       response, 
       "Failed to fetch held bills"
@@ -199,7 +213,7 @@ export async function fetchHeldBills(): Promise<HeldBill[]> {
 // Delete a held bill from the database
 export async function deleteHeldBill(id: string): Promise<{ success: boolean }> {
   try {
-    const response = await fetch(`${LOCAL_API_BASE_URL}/held-bills/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/held-bills/${id}`, {
       method: "DELETE",
     });
 

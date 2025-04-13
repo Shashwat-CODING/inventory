@@ -13,11 +13,25 @@ export default function Dashboard() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate stats from actual data
+  // Loading state
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Set loading to false after data is loaded
+  useEffect(() => {
+    if (items.length > 0) {
+      setIsLoading(false);
+    }
+  }, [items]);
+  
+  // Calculate stats from actual data with number conversion to prevent NaN
   const totalItems = items.length;
-  const lowStockItems = items.filter(item => item.available_stock < 10).length;
-  const outOfStockItems = items.filter(item => item.available_stock === 0).length;
-  const totalValue = items.reduce((sum, item) => sum + (item.available_stock * item.mrp), 0);
+  const lowStockItems = items.filter(item => Number(item.stock) < 10).length;
+  const outOfStockItems = items.filter(item => Number(item.stock) === 0).length;
+  const totalValue = items.reduce((sum, item) => {
+    const stock = Number(item.stock) || 0;
+    const price = Number(item.mrp) || 0;
+    return sum + (stock * price);
+  }, 0);
 
   return (
     <div id="dashboardView" className="space-y-6">
@@ -66,7 +80,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Redesigned animated stats cards */}
+          {/* Redesigned animated stats cards with loading states */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5 mt-6">
             <div className={`bg-gradient-to-br from-white to-indigo-50 p-5 rounded-xl border border-indigo-100 shadow-sm transition-all duration-700 ease-out transform ${animateStats ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
               <div className="flex justify-between items-start">
@@ -74,7 +88,11 @@ export default function Dashboard() {
                   <p className="text-xs font-medium text-indigo-600 uppercase tracking-wider flex items-center">
                     <i className="bx bx-box mr-1"></i> Total Items
                   </p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1.5">{totalItems}</h3>
+                  {isLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded mt-1.5"></div>
+                  ) : (
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1.5">{totalItems}</h3>
+                  )}
                 </div>
                 <div className="bg-indigo-100 rounded-lg p-2.5 border border-indigo-200 shadow-sm">
                   <i className="bx bx-package text-indigo-700 text-xl"></i>
@@ -94,7 +112,11 @@ export default function Dashboard() {
                   <p className="text-xs font-medium text-amber-600 uppercase tracking-wider flex items-center">
                     <i className="bx bx-error-circle mr-1"></i> Low Stock
                   </p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1.5">{lowStockItems}</h3>
+                  {isLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded mt-1.5"></div>
+                  ) : (
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1.5">{lowStockItems}</h3>
+                  )}
                 </div>
                 <div className="bg-amber-100 rounded-lg p-2.5 border border-amber-200 shadow-sm">
                   <i className="bx bx-error text-amber-700 text-xl"></i>
@@ -114,7 +136,11 @@ export default function Dashboard() {
                   <p className="text-xs font-medium text-red-600 uppercase tracking-wider flex items-center">
                     <i className="bx bx-x-circle mr-1"></i> Out of Stock
                   </p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1.5">{outOfStockItems}</h3>
+                  {isLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded mt-1.5"></div>
+                  ) : (
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1.5">{outOfStockItems}</h3>
+                  )}
                 </div>
                 <div className="bg-red-100 rounded-lg p-2.5 border border-red-200 shadow-sm">
                   <i className="bx bx-x-circle text-red-700 text-xl"></i>
@@ -134,7 +160,13 @@ export default function Dashboard() {
                   <p className="text-xs font-medium text-emerald-600 uppercase tracking-wider flex items-center">
                     <i className="bx bx-rupee mr-1"></i> Total Value
                   </p>
-                  <h3 className="text-2xl font-bold text-slate-800 mt-1.5">₹{(totalValue / 1000000).toFixed(1)}M</h3>
+                  {isLoading ? (
+                    <div className="h-8 w-16 bg-slate-200 animate-pulse rounded mt-1.5"></div>
+                  ) : (
+                    <h3 className="text-2xl font-bold text-slate-800 mt-1.5">
+                      ₹{(totalValue / 1000000).toFixed(1)}M
+                    </h3>
+                  )}
                 </div>
                 <div className="bg-emerald-100 rounded-lg p-2.5 border border-emerald-200 shadow-sm">
                   <i className="bx bx-rupee text-emerald-700 text-xl"></i>

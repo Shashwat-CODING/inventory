@@ -57,10 +57,11 @@ export default function SalesPage() {
     } else {
       const query = searchQuery.toLowerCase();
       const filtered = items.filter(item => 
-        item.item_name.toLowerCase().includes(query) ||
-        item.item_code.toLowerCase().includes(query) ||
-        item.brand.toLowerCase().includes(query) ||
-        item.division.toLowerCase().includes(query)
+        (item.desca && item.desca.toLowerCase().includes(query)) ||
+        (item.mcode && item.mcode.toLowerCase().includes(query)) ||
+        (item.barcode && item.barcode.toLowerCase().includes(query)) ||
+        (item.brand && item.brand.toLowerCase().includes(query)) ||
+        (item.divisions && item.divisions.toLowerCase().includes(query))
       );
       setFilteredItems(filtered);
     }
@@ -206,17 +207,17 @@ export default function SalesPage() {
                       {filteredItems.map(item => (
                         <div 
                           key={item.id}
-                          className={`p-3 rounded-md border ${item.available_stock <= 0 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-slate-200 hover:border-primary cursor-pointer'}`}
-                          onClick={() => item.available_stock > 0 && handleSelectItem(item)}
+                          className={`p-3 rounded-md border ${Number(item.stock) <= 0 ? 'bg-slate-50 border-slate-200 opacity-60' : 'bg-white border-slate-200 hover:border-primary cursor-pointer'}`}
+                          onClick={() => Number(item.stock) > 0 && handleSelectItem(item)}
                         >
                           <div className="flex justify-between">
-                            <div className="font-medium text-slate-900 truncate">{item.item_name}</div>
+                            <div className="font-medium text-slate-900 truncate">{item.desca}</div>
                             <div className="text-sm font-medium text-primary">{formatCurrency(item.mrp)}</div>
                           </div>
                           <div className="flex justify-between mt-1">
-                            <div className="text-xs text-slate-500">{item.item_code} | {item.brand}</div>
-                            <div className={`text-xs font-medium ${item.available_stock <= 0 ? 'text-red-500' : 'text-green-600'}`}>
-                              {item.available_stock} {item.base_unit} available
+                            <div className="text-xs text-slate-500">{item.mcode} | {item.brand || 'N/A'}</div>
+                            <div className={`text-xs font-medium ${Number(item.stock) <= 0 ? 'text-red-500' : 'text-green-600'}`}>
+                              {Number(item.stock)} {item.unit || 'Unit'} available
                             </div>
                           </div>
                         </div>
@@ -257,8 +258,8 @@ export default function SalesPage() {
                     <div key={`${item.item.id}-${index}`} className="border border-slate-200 rounded-md p-3">
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium text-slate-900">{item.item.item_name}</div>
-                          <div className="text-xs text-slate-500">{item.item.item_code}</div>
+                          <div className="font-medium text-slate-900">{item.item.desca}</div>
+                          <div className="text-xs text-slate-500">{item.item.mcode}</div>
                         </div>
                         <div className="flex space-x-2">
                           <button
@@ -284,7 +285,7 @@ export default function SalesPage() {
                           <input
                             type="number"
                             min="1"
-                            max={item.item.available_stock}
+                            max={Number(item.item.stock)}
                             className="mt-1 w-full px-2 py-1 border border-slate-300 rounded-md text-right"
                             value={item.quantity}
                             onChange={(e) => updateSaleItemQuantity(index, parseInt(e.target.value) || 1)}
@@ -325,15 +326,15 @@ export default function SalesPage() {
                       <tr key={`${item.item.id}-${index}`}>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-slate-900">
                           <div>
-                            <div className="font-medium">{item.item.item_name}</div>
-                            <div className="text-slate-500 text-xs">{item.item.item_code}</div>
+                            <div className="font-medium">{item.item.desca}</div>
+                            <div className="text-slate-500 text-xs">{item.item.mcode}</div>
                           </div>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-sm text-right">
                           <input
                             type="number"
                             min="1"
-                            max={item.item.available_stock}
+                            max={Number(item.item.stock)}
                             className="w-16 px-2 py-1 border border-slate-300 rounded-md text-right"
                             value={item.quantity}
                             onChange={(e) => updateSaleItemQuantity(index, parseInt(e.target.value) || 1)}
@@ -527,8 +528,8 @@ export default function SalesPage() {
             
             <div className="px-6 py-4">
               <div className="mb-4">
-                <h4 className="font-medium text-slate-900">{selectedItem.item_name}</h4>
-                <p className="text-sm text-slate-500">{selectedItem.item_code} | {selectedItem.brand}</p>
+                <h4 className="font-medium text-slate-900">{selectedItem.desca}</h4>
+                <p className="text-sm text-slate-500">{selectedItem.mcode} | {selectedItem.brand || 'N/A'}</p>
               </div>
               
               <div className="space-y-4">
@@ -538,12 +539,12 @@ export default function SalesPage() {
                     type="number"
                     id="modal-quantity"
                     min="1"
-                    max={selectedItem.available_stock}
+                    max={Number(selectedItem.stock)}
                     className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                     value={quantity}
                     onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
                   />
-                  <p className="mt-1 text-xs text-slate-500">{selectedItem.available_stock} {selectedItem.base_unit} available</p>
+                  <p className="mt-1 text-xs text-slate-500">{Number(selectedItem.stock)} {selectedItem.unit || 'Unit'} available</p>
                 </div>
 
                 <div>
@@ -599,10 +600,10 @@ export default function SalesPage() {
                     <span>Total:</span>
                     <span>
                       {formatCurrency(
-                        discountType === DiscountType.NONE ? selectedItem.mrp * quantity :
+                        discountType === DiscountType.NONE ? Number(selectedItem.mrp) * quantity :
                         discountType === DiscountType.PERCENTAGE ? 
-                          (selectedItem.mrp * (1 - (discountValue / 100))) * quantity :
-                          (selectedItem.mrp * quantity) / (discountValue || 1)
+                          (Number(selectedItem.mrp) * (1 - (discountValue / 100))) * quantity :
+                          (Number(selectedItem.mrp) * quantity) / (discountValue || 1)
                       )}
                     </span>
                   </div>
@@ -622,7 +623,7 @@ export default function SalesPage() {
                 type="button"
                 className="btn-primary"
                 onClick={handleAddItem}
-                disabled={quantity < 1 || quantity > selectedItem.available_stock || 
+                disabled={quantity < 1 || quantity > Number(selectedItem.stock) || 
                           (discountType === DiscountType.DIVISOR && (!discountValue || discountValue <= 0))}
               >
                 <i className={`bx ${isEditMode ? 'bx-check' : 'bx-plus'} mr-2`}></i>

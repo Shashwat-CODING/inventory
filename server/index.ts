@@ -3,8 +3,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+// Increase JSON payload limit to 50MB for bulk imports
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -38,6 +39,32 @@ app.use((req, res, next) => {
 
 (async () => {
   const server = await registerRoutes(app);
+  
+  // Setup server self-ping to stay alive (replaces client-side ping)
+  const setupServerSelfPing = () => {
+    const pingEndpoint = () => {
+      try {
+        fetch('http://localhost:5000/api/ping')
+          .then(response => {
+            if (response.ok) {
+              log('Server self-ping successful');
+            }
+          })
+          .catch(error => {
+            console.error('Error in server self-ping:', error);
+          });
+      } catch (error) {
+        console.error('Failed to execute server self-ping:', error);
+      }
+    };
+    
+    // Ping every 60 seconds
+    setInterval(pingEndpoint, 60000);
+    log('Server self-ping mechanism initialized');
+  };
+  
+  // Start self-ping once server is ready
+  setTimeout(setupServerSelfPing, 5000);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

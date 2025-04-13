@@ -59,6 +59,52 @@ export default function InventoryTable() {
   };
 
   if (isLoading) {
+    // Show different loading states for mobile and desktop
+    if (isMobile) {
+      return (
+        <div className="bg-white shadow-md rounded-xl border border-slate-200 overflow-hidden animate-pulse">
+          <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100">
+            <div className="h-6 bg-slate-200 rounded w-3/4"></div>
+          </div>
+          
+          <div className="divide-y divide-slate-200">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-4">
+                <div className="flex justify-between items-start mb-3">
+                  <div className="w-2/3">
+                    <div className="h-5 bg-slate-200 rounded w-full mb-2"></div>
+                    <div className="h-3 bg-slate-100 rounded w-4/5"></div>
+                  </div>
+                  <div className="h-5 w-16 bg-slate-200 rounded-full"></div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3 my-3">
+                  <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                    <div className="h-3 bg-slate-200 rounded w-1/2 mb-1"></div>
+                    <div className="h-5 bg-slate-200 rounded w-2/3"></div>
+                  </div>
+                  
+                  <div className="bg-slate-50 p-2 rounded border border-slate-200">
+                    <div className="h-3 bg-slate-200 rounded w-1/2 mb-1"></div>
+                    <div className="h-5 bg-slate-200 rounded w-2/3"></div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-3 pt-2 border-t border-slate-100">
+                  <div className="flex space-x-1">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-8 w-8 bg-slate-200 rounded-full"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    
+    // Desktop loading state
     return (
       <div className="bg-white shadow-md rounded-xl border border-slate-200 overflow-hidden animate-pulse">
         <div className="p-8 flex flex-col items-center justify-center">
@@ -179,32 +225,32 @@ export default function InventoryTable() {
               <th 
                 scope="col" 
                 className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer border-b border-slate-200"
-                onClick={() => handleSort('item_code')}
+                onClick={() => handleSort('mcode')}
               >
                 <div className="flex items-center">
                   <span>Code</span>
-                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('item_code', sorting.field, sorting.direction)}`}></i>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('mcode', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
               <th 
                 scope="col" 
                 className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer border-b border-slate-200"
-                onClick={() => handleSort('item_name')}
+                onClick={() => handleSort('desca')}
               >
                 <div className="flex items-center">
-                  <span>Name</span>
-                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('item_name', sorting.field, sorting.direction)}`}></i>
+                  <span>Description</span>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('desca', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
 
               <th 
                 scope="col" 
                 className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider cursor-pointer border-b border-slate-200"
-                onClick={() => handleSort('available_stock')}
+                onClick={() => handleSort('stock')}
               >
                 <div className="flex items-center justify-end">
                   <span>Stock</span>
-                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('available_stock', sorting.field, sorting.direction)}`}></i>
+                  <i className={`bx ml-1.5 text-indigo-500 ${getSortIndicatorClass('stock', sorting.field, sorting.direction)}`}></i>
                 </div>
               </th>
               <th 
@@ -277,19 +323,26 @@ export default function InventoryTable() {
 function MobileItemCard({ item, onView, onEdit, onAddStock, onSellStock, onDelete }: TableRowProps) {
   const statusClass = getStatusBadgeClass(item);
   const statusText = getStatusText(item);
-  const isLowStock = item.available_stock < 10;
+  const stockNum = typeof item.stock === 'string' ? parseFloat(item.stock) : item.stock;
+  const isLowStock = stockNum < 5;
+  
+  // Format GST percentage
+  const gstValue = typeof item.gst === 'string' ? parseFloat(item.gst) : item.gst;
+  
+  // Format price properly
+  const price = typeof item.mrp === 'string' ? parseFloat(item.mrp) : item.mrp;
   
   return (
     <div className="p-4 bg-white hover:bg-slate-50 transition-all">
       <div className="flex justify-between items-start mb-2">
-        <div>
-          <h3 className="font-medium text-slate-800">{item.item_name}</h3>
-          <div className="text-xs text-slate-500 mt-0.5 flex items-center">
-            <span className="mr-2">Code: {item.item_code}</span>
+        <div className="flex-1 pr-2">
+          <h3 className="font-medium text-slate-800 break-words">{item.desca}</h3>
+          <div className="text-xs text-slate-500 mt-0.5 flex flex-wrap">
+            <span className="mr-2">Code: {item.mcode}</span>
             <span>Barcode: {item.barcode || 'N/A'}</span>
           </div>
         </div>
-        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-medium rounded-full ${statusClass}`}>
+        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-medium rounded-full whitespace-nowrap ${statusClass}`}>
           {statusText}
         </span>
       </div>
@@ -298,38 +351,69 @@ function MobileItemCard({ item, onView, onEdit, onAddStock, onSellStock, onDelet
         <div className="bg-slate-50 p-2 rounded border border-slate-200">
           <div className="text-xs text-slate-500">Stock</div>
           <div className={`font-medium ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
-            {item.available_stock} {item.base_unit || 'Units'}
+            {stockNum} {item.unit || 'Units'}
           </div>
         </div>
         
         <div className="bg-slate-50 p-2 rounded border border-slate-200">
           <div className="text-xs text-slate-500">Price</div>
-          <div className="font-medium text-slate-700">{formatCurrency(item.mrp)}</div>
+          <div className="font-medium text-slate-700">{formatCurrency(price)}</div>
+          <div className="text-xs text-slate-500 mt-0.5">GST: {gstValue}%</div>
         </div>
       </div>
       
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
-        <div className="text-xs text-slate-500">
-          {item.division ? `Division: ${item.division}` : ''}
+      <div className="grid grid-cols-3 gap-2 mt-3">
+        <div className="col-span-3 flex items-center justify-between pb-2 border-b border-slate-100">
+          <div className="text-xs text-slate-500 truncate">
+            {item.divisions ? `Division: ${item.divisions}` : ''}
+          </div>
+          
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={onView}
+              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+              title="View Details"
+              aria-label="View Details"
+            >
+              <i className="bx bx-info-circle"></i>
+            </button>
+            <button
+              onClick={onEdit}
+              className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+              title="Edit"
+              aria-label="Edit Item"
+            >
+              <i className="bx bx-edit"></i>
+            </button>
+          </div>
         </div>
         
-        <div className="flex space-x-1">
-          <button onClick={onView} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="View Details">
-            <i className="bx bx-info-circle"></i>
-          </button>
-          <button onClick={onEdit} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors" title="Edit">
-            <i className="bx bx-edit"></i>
-          </button>
-          <button onClick={onAddStock} className="p-1.5 text-green-600 hover:bg-green-50 rounded-full transition-colors" title="Add Stock">
-            <i className="bx bx-plus-circle"></i>
-          </button>
-          <button onClick={onSellStock} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-full transition-colors" title="Sell Stock">
-            <i className="bx bx-minus-circle"></i>
-          </button>
-          <button onClick={onDelete} className="p-1.5 text-red-600 hover:bg-red-50 rounded-full transition-colors" title="Delete">
-            <i className="bx bx-trash"></i>
-          </button>
-        </div>
+        <button
+          onClick={onAddStock}
+          className="flex-1 p-2 bg-green-50 text-green-700 hover:bg-green-100 rounded-md text-sm font-medium transition-colors flex items-center justify-center"
+          title="Add Stock"
+        >
+          <i className="bx bx-plus-circle mr-1.5"></i>
+          Add
+        </button>
+        
+        <button
+          onClick={onSellStock}
+          className="flex-1 p-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-md text-sm font-medium transition-colors flex items-center justify-center"
+          title="Sell Stock"
+        >
+          <i className="bx bx-minus-circle mr-1.5"></i>
+          Sell
+        </button>
+        
+        <button
+          onClick={onDelete}
+          className="flex-1 p-2 bg-red-50 text-red-700 hover:bg-red-100 rounded-md text-sm font-medium transition-colors flex items-center justify-center"
+          title="Delete"
+        >
+          <i className="bx bx-trash mr-1.5"></i>
+          Delete
+        </button>
       </div>
     </div>
   );
@@ -349,27 +433,31 @@ function TableRow({ item, onView, onEdit, onAddStock, onSellStock, onDelete }: T
   const statusText = getStatusText(item);
   
   // Calculate low stock warning
-  const isLowStock = item.available_stock < 10;
+  const stockNum = typeof item.stock === 'string' ? parseFloat(item.stock) : item.stock;
+  const isLowStock = stockNum < 5;
+  
+  // Format GST percentage
+  const gstValue = typeof item.gst === 'string' ? parseFloat(item.gst) : item.gst;
 
   return (
     <tr className="hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0">
       <td className="px-6 py-4 whitespace-nowrap">
         <div className="flex items-center">
-          <span className="text-sm font-medium text-slate-800">{item.item_code}</span>
+          <span className="text-sm font-medium text-slate-800">{item.mcode}</span>
         </div>
       </td>
       
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-slate-700 font-medium">{item.item_name}</div>
+        <div className="text-sm text-slate-700 font-medium">{item.desca}</div>
         <div className="text-xs text-slate-500 mt-0.5">Code: {item.barcode || 'N/A'}</div>
       </td>
       
       <td className="px-6 py-4 whitespace-nowrap text-right">
         <div className={`text-sm font-medium tabular-nums ${isLowStock ? 'text-amber-600' : 'text-slate-700'}`}>
-          {item.available_stock}
+          {stockNum}
         </div>
         <div className="text-xs text-slate-500 mt-0.5">
-          Unit: {item.base_unit || 'Each'}
+          Unit: {item.unit || 'Each'}
         </div>
       </td>
       
@@ -378,7 +466,7 @@ function TableRow({ item, onView, onEdit, onAddStock, onSellStock, onDelete }: T
           {formatCurrency(item.mrp)}
         </div>
         <div className="text-xs text-slate-500 mt-0.5 tabular-nums">
-          Cost: {formatCurrency(item.cost_price)}
+          GST: {gstValue}%
         </div>
       </td>
       
