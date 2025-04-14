@@ -57,16 +57,23 @@ export default function StockAdjustmentModal() {
       return;
     }
     
-    if (!isAddStock && quantity > currentItem.available_stock) {
-      setError(`Cannot sell more than available stock (${currentItem.available_stock} ${currentItem.base_unit})`);
+    // Get current stock as a number
+    const currentStock = typeof currentItem.stock === 'string' 
+      ? parseFloat(currentItem.stock) 
+      : currentItem.stock;
+    
+    if (!isAddStock && quantity > currentStock) {
+      setError(`Cannot sell more than available stock (${currentStock} ${currentItem.unit || 'units'})`);
       return;
     }
     
     try {
       if (isAddStock) {
         await addStock(currentItem.id, quantity);
+        console.log(`Added ${quantity} to item ${currentItem.id}`);
       } else {
         await sellStock(currentItem.id, quantity);
+        console.log(`Sold ${quantity} from item ${currentItem.id}`);
       }
     } catch (error) {
       console.error('Error adjusting stock:', error);
@@ -77,16 +84,26 @@ export default function StockAdjustmentModal() {
   const calculateNewStock = (): number => {
     if (!currentItem) return 0;
     
+    // Convert current stock to number
+    const currentStock = typeof currentItem.stock === 'string' 
+      ? parseFloat(currentItem.stock) 
+      : currentItem.stock;
+    
     if (isAddStock) {
-      return currentItem.available_stock + quantity;
+      return currentStock + quantity;
     } else {
-      return Math.max(0, currentItem.available_stock - quantity);
+      return Math.max(0, currentStock - quantity);
     }
   };
 
   if (!isOpen || !currentItem) {
     return null;
   }
+
+  // Convert stock to number for display
+  const currentStock = typeof currentItem.stock === 'string' 
+    ? parseFloat(currentItem.stock) 
+    : currentItem.stock;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
@@ -111,8 +128,8 @@ export default function StockAdjustmentModal() {
             <div className="mt-2">
               <p className="text-sm text-slate-500">
                 <span>{isAddStock ? 'Add stock to' : 'Sell stock from'} inventory item:</span>{' '}
-                <span className="font-medium text-slate-700">{currentItem.item_name}</span>{' '}
-                <span className="text-xs text-slate-500">({currentItem.item_code})</span>
+                <span className="font-medium text-slate-700">{currentItem.desca}</span>{' '}
+                <span className="text-xs text-slate-500">({currentItem.mcode})</span>
               </p>
             </div>
             <div className="mt-4">
@@ -127,14 +144,14 @@ export default function StockAdjustmentModal() {
                       name="quantity"
                       id="quantity"
                       min="1"
-                      max={!isAddStock ? currentItem.available_stock : undefined}
+                      max={!isAddStock ? currentStock : undefined}
                       className={`block w-full px-3 py-2 border ${error ? 'border-red-300' : 'border-slate-300'} rounded-l-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
                       value={quantity}
                       onChange={handleQuantityChange}
                       required
                     />
                     <span className="inline-flex items-center px-3 py-2 border border-l-0 border-slate-300 bg-slate-50 text-slate-500 sm:text-sm rounded-r-md">
-                      {currentItem.base_unit}
+                      {currentItem.unit || 'Units'}
                     </span>
                   </div>
                   {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
@@ -149,6 +166,7 @@ export default function StockAdjustmentModal() {
                     className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                     value={notes}
                     onChange={handleNotesChange}
+                    placeholder="Optional notes about this stock adjustment"
                   ></textarea>
                 </div>
                 
@@ -156,11 +174,11 @@ export default function StockAdjustmentModal() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-slate-500">Current Stock:</p>
-                      <p className="text-lg font-medium text-slate-900">{currentItem.available_stock} {currentItem.base_unit}</p>
+                      <p className="text-lg font-medium text-slate-900">{currentStock} {currentItem.unit || 'Units'}</p>
                     </div>
                     <div>
                       <p className="text-sm text-slate-500">{isAddStock ? 'New Stock:' : 'Remaining Stock:'}</p>
-                      <p className="text-lg font-medium text-slate-900">{calculateNewStock()} {currentItem.base_unit}</p>
+                      <p className="text-lg font-medium text-slate-900">{calculateNewStock()} {currentItem.unit || 'Units'}</p>
                     </div>
                   </div>
                 </div>

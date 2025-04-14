@@ -80,28 +80,28 @@ export function filterItems(
   status: string
 ): InventoryItem[] {
   return items.filter(item => {
-    // Apply search filter
+    // Apply search filter, with null checks
     const matchesSearch = !search || 
-      item.mcode.toLowerCase().includes(search.toLowerCase()) ||
-      item.desca.toLowerCase().includes(search.toLowerCase()) ||
-      item.brand.toLowerCase().includes(search.toLowerCase()) ||
-      item.barcode.toLowerCase().includes(search.toLowerCase());
+      (item.mcode?.toLowerCase()?.includes(search.toLowerCase()) || false) ||
+      (item.desca?.toLowerCase()?.includes(search.toLowerCase()) || false) ||
+      (item.brand?.toLowerCase()?.includes(search.toLowerCase()) || false) ||
+      (item.barcode?.toLowerCase()?.includes(search.toLowerCase()) || false);
     
-    // Apply division filter
+    // Apply division filter with null checks
     const matchesDivision = !division || 
-      item.divisions === division || 
-      item.multi_itemdivision.includes(division);
+      (item.divisions === division) || 
+      (item.multi_itemdivision?.includes(division) || false);
     
-    // Apply status filter
+    // Apply status filter with null checks
     let matchesStatus = true;
     if (status) {
-      const stockNum = typeof item.stock === 'string' ? parseFloat(item.stock) : item.stock;
+      const stockNum = typeof item.stock === 'string' ? parseFloat(item.stock || '0') : (item.stock || 0);
       if (status === 'Low Stock') {
         matchesStatus = stockNum < 5;
       } else if (status === 'Active') {
-        matchesStatus = item.status === 'true';
+        matchesStatus = String(item.status).toLowerCase() === 'active' || item.status === 'true';
       } else if (status === 'Inactive') {
-        matchesStatus = item.status === 'false';
+        matchesStatus = String(item.status).toLowerCase() === 'inactive' || item.status === 'false';
       }
     }
     
@@ -116,24 +116,36 @@ export function sortItems(
   sortDirection: 'asc' | 'desc'
 ): InventoryItem[] {
   return [...items].sort((a, b) => {
-    let aValue = a[sortField];
-    let bValue = b[sortField];
+    let aValue = a[sortField] || '';
+    let bValue = b[sortField] || '';
     
     // Handle numeric string values - convert to numbers
     if (sortField === 'mrp' || sortField === 'gst' || sortField === 'stock') {
-      aValue = typeof aValue === 'string' ? parseFloat(aValue) : aValue;
-      bValue = typeof bValue === 'string' ? parseFloat(bValue) : bValue;
+      aValue = typeof aValue === 'string' ? parseFloat(aValue || '0') : (aValue || 0);
+      bValue = typeof bValue === 'string' ? parseFloat(bValue || '0') : (bValue || 0);
     }
     // Handle string comparison
     else if (typeof aValue === 'string' && typeof bValue === 'string') {
       aValue = (aValue as string).toLowerCase();
       bValue = (bValue as string).toLowerCase();
     }
+    // Handle undefined values
+    else if (aValue === undefined || aValue === null) {
+      aValue = '';
+    }
+    else if (bValue === undefined || bValue === null) {
+      bValue = '';
+    }
     
-    if (sortDirection === 'asc') {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
+    try {
+      if (sortDirection === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    } catch (error) {
+      console.error("Error sorting:", error);
+      return 0;
     }
   });
 }

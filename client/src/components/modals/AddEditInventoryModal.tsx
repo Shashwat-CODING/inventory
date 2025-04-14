@@ -14,24 +14,26 @@ export default function AddEditInventoryModal() {
   const isOpen = activeModal === ModalType.ADD_EDIT;
   const isEdit = !!currentItem;
 
-  // Form state
+  // Form state that matches our actual InventoryItem structure
   const [formData, setFormData] = useState<NewInventoryItem>({
-    item_code: "",
-    item_name: "",
-    division: "",
-    vertical: "",
-    brand: "",
-    opening_stock: 0,
-    available_stock: 0,
-    mrp: 0,
-    cost_price: 0,
-    gst_percentage: 0,
+    multi_itemdivision: "",
+    divisions: "",
+    mcode: "",
+    menucode: "",
+    desca: "",
     barcode: "",
-    exp_date: "",
-    mfg_date: "",
-    batch: "",
+    unit: "",
+    isvat: 0,
+    mrp: 0,
+    gst: 0,
+    cess: 0,
+    gweight: 0,
+    nweight: 0,
+    mcat: "",
+    brand: "",
+    item_summary: "",
     warehouse: "",
-    base_unit: "",
+    stock: 0,
     status: "Active"
   });
 
@@ -41,45 +43,60 @@ export default function AddEditInventoryModal() {
   // Populate form with item data when editing
   useEffect(() => {
     if (isEdit && currentItem) {
+      // Convert string values to numbers where needed
+      const mrpValue = typeof currentItem.mrp === 'string' ? parseFloat(currentItem.mrp) : currentItem.mrp;
+      const gstValue = typeof currentItem.gst === 'string' ? parseFloat(currentItem.gst) : currentItem.gst;
+      const cessValue = typeof currentItem.cess === 'string' ? parseFloat(currentItem.cess) : currentItem.cess;
+      const gweightValue = typeof currentItem.gweight === 'string' ? parseFloat(currentItem.gweight) : currentItem.gweight;
+      const nweightValue = typeof currentItem.nweight === 'string' ? parseFloat(currentItem.nweight) : currentItem.nweight;
+      const stockValue = typeof currentItem.stock === 'string' ? parseFloat(currentItem.stock) : currentItem.stock;
+      
+      // Set form data with current item values
       setFormData({
-        item_code: currentItem.item_code,
-        item_name: currentItem.item_name,
-        division: currentItem.division,
-        vertical: currentItem.vertical,
-        brand: currentItem.brand,
-        opening_stock: currentItem.opening_stock,
-        available_stock: currentItem.available_stock,
-        mrp: currentItem.mrp,
-        cost_price: currentItem.cost_price,
-        gst_percentage: currentItem.gst_percentage,
-        barcode: currentItem.barcode,
-        exp_date: currentItem.exp_date,
-        mfg_date: currentItem.mfg_date,
-        batch: currentItem.batch,
-        warehouse: currentItem.warehouse,
-        base_unit: currentItem.base_unit,
-        status: currentItem.status
+        multi_itemdivision: currentItem.multi_itemdivision || '',
+        divisions: currentItem.divisions || '',
+        mcode: currentItem.mcode || '',
+        menucode: currentItem.menucode || '',
+        desca: currentItem.desca || '',
+        barcode: currentItem.barcode || '',
+        unit: currentItem.unit || '',
+        isvat: currentItem.isvat || 0,
+        mrp: mrpValue || 0,
+        gst: gstValue || 0,
+        cess: cessValue || 0,
+        gweight: gweightValue || 0,
+        nweight: nweightValue || 0,
+        mcat: currentItem.mcat || '',
+        brand: currentItem.brand || '',
+        item_summary: currentItem.item_summary || '',
+        warehouse: currentItem.warehouse || '',
+        stock: stockValue || 0,
+        status: currentItem.status || 'Active'
       });
+      
+      console.log('Editing item:', currentItem);
     } else {
       // Reset form for new item
       setFormData({
-        item_code: "",
-        item_name: "",
-        division: "",
-        vertical: "",
-        brand: "",
-        opening_stock: 0,
-        available_stock: 0,
+        multi_itemdivision: '',
+        divisions: '',
+        mcode: '',
+        menucode: '',
+        desca: '',
+        barcode: '',
+        unit: '',
+        isvat: 0,
         mrp: 0,
-        cost_price: 0,
-        gst_percentage: 0,
-        barcode: "",
-        exp_date: "",
-        mfg_date: "",
-        batch: "",
-        warehouse: "",
-        base_unit: "",
-        status: "Active"
+        gst: 0,
+        cess: 0,
+        gweight: 0,
+        nweight: 0,
+        mcat: '',
+        brand: '',
+        item_summary: '',
+        warehouse: '',
+        stock: 0,
+        status: 'Active'
       });
     }
     
@@ -108,8 +125,7 @@ export default function AddEditInventoryModal() {
     
     // Required fields
     const requiredFields: Array<keyof NewInventoryItem> = [
-      'item_code', 'item_name', 'division', 'brand', 'opening_stock',
-      'mrp', 'cost_price', 'gst_percentage', 'warehouse', 'base_unit'
+      'mcode', 'desca', 'brand', 'unit', 'mrp', 'gst', 'warehouse', 'stock'
     ];
     
     requiredFields.forEach(field => {
@@ -119,20 +135,16 @@ export default function AddEditInventoryModal() {
     });
     
     // Numeric validation
-    if (formData.opening_stock < 0) {
-      newErrors.opening_stock = 'Must be a positive number';
+    if (formData.stock < 0) {
+      newErrors.stock = 'Must be a positive number';
     }
     
     if (formData.mrp < 0) {
       newErrors.mrp = 'Must be a positive number';
     }
     
-    if (formData.cost_price < 0) {
-      newErrors.cost_price = 'Must be a positive number';
-    }
-    
-    if (formData.gst_percentage < 0 || formData.gst_percentage > 100) {
-      newErrors.gst_percentage = 'Must be between 0 and 100';
+    if (formData.gst < 0 || formData.gst > 100) {
+      newErrors.gst = 'Must be between 0 and 100';
     }
     
     setErrors(newErrors);
@@ -151,13 +163,10 @@ export default function AddEditInventoryModal() {
       if (isEdit && currentItem) {
         await updateItem(currentItem.id, formData);
       } else {
-        // For new items, set available_stock to opening_stock
-        const newItem = {
-          ...formData,
-          available_stock: formData.opening_stock
-        };
-        await addItem(newItem);
+        await addItem(formData);
       }
+      
+      closeModal();
     } catch (error) {
       console.error('Error saving item:', error);
     }
@@ -180,7 +189,9 @@ export default function AddEditInventoryModal() {
               onClick={closeModal}
             >
               <span className="sr-only">Close</span>
-              <i className="bx bx-x text-2xl"></i>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
           <div>
@@ -191,59 +202,52 @@ export default function AddEditInventoryModal() {
               <form id="inventoryForm" className="space-y-6" onSubmit={handleSubmit}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="item_code" className="block text-sm font-medium text-slate-700">Item Code*</label>
+                    <label htmlFor="mcode" className="block text-sm font-medium text-slate-700">Item Code*</label>
                     <input
                       type="text"
-                      name="item_code"
-                      id="item_code"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.item_code ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.item_code}
+                      name="mcode"
+                      id="mcode"
+                      className={`mt-1 block w-full px-3 py-2 border ${errors.mcode ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
+                      value={formData.mcode}
                       onChange={handleInputChange}
                       required
                     />
-                    {errors.item_code && <p className="mt-1 text-sm text-red-600">{errors.item_code}</p>}
+                    {errors.mcode && <p className="mt-1 text-sm text-red-600">{errors.mcode}</p>}
                   </div>
                   <div>
-                    <label htmlFor="item_name" className="block text-sm font-medium text-slate-700">Item Name*</label>
+                    <label htmlFor="desca" className="block text-sm font-medium text-slate-700">Item Name*</label>
                     <input
                       type="text"
-                      name="item_name"
-                      id="item_name"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.item_name ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.item_name}
+                      name="desca"
+                      id="desca"
+                      className={`mt-1 block w-full px-3 py-2 border ${errors.desca ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
+                      value={formData.desca}
                       onChange={handleInputChange}
                       required
                     />
-                    {errors.item_name && <p className="mt-1 text-sm text-red-600">{errors.item_name}</p>}
+                    {errors.desca && <p className="mt-1 text-sm text-red-600">{errors.desca}</p>}
                   </div>
                   <div>
-                    <label htmlFor="division" className="block text-sm font-medium text-slate-700">Division*</label>
-                    <select
-                      name="division"
-                      id="division"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.division ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.division}
-                      onChange={handleInputChange}
-                      required
-                    >
-                      <option value="">Select Division</option>
-                      <option value="Electronics">Electronics</option>
-                      <option value="Food">Food</option>
-                      <option value="Clothing">Clothing</option>
-                      <option value="Home">Home</option>
-                      <option value="Beauty">Beauty</option>
-                    </select>
-                    {errors.division && <p className="mt-1 text-sm text-red-600">{errors.division}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="vertical" className="block text-sm font-medium text-slate-700">Vertical</label>
+                    <label htmlFor="divisions" className="block text-sm font-medium text-slate-700">Division</label>
                     <input
                       type="text"
-                      name="vertical"
-                      id="vertical"
+                      name="divisions"
+                      id="divisions"
                       className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={formData.vertical}
+                      value={formData.divisions}
                       onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="multi_itemdivision" className="block text-sm font-medium text-slate-700">Item Division Categories</label>
+                    <input
+                      type="text"
+                      name="multi_itemdivision"
+                      id="multi_itemdivision"
+                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      value={formData.multi_itemdivision}
+                      onChange={handleInputChange}
+                      placeholder="E.g. FOOD,OTC,GV"
                     />
                   </div>
                   <div>
@@ -260,18 +264,18 @@ export default function AddEditInventoryModal() {
                     {errors.brand && <p className="mt-1 text-sm text-red-600">{errors.brand}</p>}
                   </div>
                   <div>
-                    <label htmlFor="opening_stock" className="block text-sm font-medium text-slate-700">Opening Stock*</label>
+                    <label htmlFor="stock" className="block text-sm font-medium text-slate-700">Stock*</label>
                     <input
                       type="number"
-                      name="opening_stock"
-                      id="opening_stock"
+                      name="stock"
+                      id="stock"
                       min="0"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.opening_stock ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.opening_stock}
+                      className={`mt-1 block w-full px-3 py-2 border ${errors.stock ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
+                      value={formData.stock}
                       onChange={handleInputChange}
                       required
                     />
-                    {errors.opening_stock && <p className="mt-1 text-sm text-red-600">{errors.opening_stock}</p>}
+                    {errors.stock && <p className="mt-1 text-sm text-red-600">{errors.stock}</p>}
                   </div>
                   <div>
                     <label htmlFor="mrp" className="block text-sm font-medium text-slate-700">MRP*</label>
@@ -289,35 +293,20 @@ export default function AddEditInventoryModal() {
                     {errors.mrp && <p className="mt-1 text-sm text-red-600">{errors.mrp}</p>}
                   </div>
                   <div>
-                    <label htmlFor="cost_price" className="block text-sm font-medium text-slate-700">Cost Price*</label>
+                    <label htmlFor="gst" className="block text-sm font-medium text-slate-700">GST Percentage*</label>
                     <input
                       type="number"
-                      name="cost_price"
-                      id="cost_price"
-                      min="0"
-                      step="0.01"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.cost_price ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.cost_price}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    {errors.cost_price && <p className="mt-1 text-sm text-red-600">{errors.cost_price}</p>}
-                  </div>
-                  <div>
-                    <label htmlFor="gst_percentage" className="block text-sm font-medium text-slate-700">GST Percentage*</label>
-                    <input
-                      type="number"
-                      name="gst_percentage"
-                      id="gst_percentage"
+                      name="gst"
+                      id="gst"
                       min="0"
                       max="100"
                       step="0.01"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.gst_percentage ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.gst_percentage}
+                      className={`mt-1 block w-full px-3 py-2 border ${errors.gst ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
+                      value={formData.gst}
                       onChange={handleInputChange}
                       required
                     />
-                    {errors.gst_percentage && <p className="mt-1 text-sm text-red-600">{errors.gst_percentage}</p>}
+                    {errors.gst && <p className="mt-1 text-sm text-red-600">{errors.gst}</p>}
                   </div>
                   <div>
                     <label htmlFor="barcode" className="block text-sm font-medium text-slate-700">Barcode</label>
@@ -331,35 +320,63 @@ export default function AddEditInventoryModal() {
                     />
                   </div>
                   <div>
-                    <label htmlFor="exp_date" className="block text-sm font-medium text-slate-700">Expiry Date</label>
+                    <label htmlFor="cess" className="block text-sm font-medium text-slate-700">CESS Percentage</label>
                     <input
-                      type="date"
-                      name="exp_date"
-                      id="exp_date"
+                      type="number"
+                      name="cess"
+                      id="cess"
+                      min="0"
+                      step="0.01"
                       className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={formData.exp_date}
+                      value={formData.cess}
                       onChange={handleInputChange}
                     />
                   </div>
                   <div>
-                    <label htmlFor="mfg_date" className="block text-sm font-medium text-slate-700">Manufacturing Date</label>
+                    <label htmlFor="gweight" className="block text-sm font-medium text-slate-700">Gross Weight</label>
                     <input
-                      type="date"
-                      name="mfg_date"
-                      id="mfg_date"
+                      type="number"
+                      name="gweight"
+                      id="gweight"
+                      min="0"
+                      step="0.01"
                       className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={formData.mfg_date}
+                      value={formData.gweight}
                       onChange={handleInputChange}
                     />
                   </div>
                   <div>
-                    <label htmlFor="batch" className="block text-sm font-medium text-slate-700">Batch</label>
+                    <label htmlFor="nweight" className="block text-sm font-medium text-slate-700">Net Weight</label>
+                    <input
+                      type="number"
+                      name="nweight"
+                      id="nweight"
+                      min="0"
+                      step="0.01"
+                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      value={formData.nweight}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="mcat" className="block text-sm font-medium text-slate-700">Category</label>
                     <input
                       type="text"
-                      name="batch"
-                      id="batch"
+                      name="mcat"
+                      id="mcat"
                       className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
-                      value={formData.batch}
+                      value={formData.mcat}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="menucode" className="block text-sm font-medium text-slate-700">Menu Code</label>
+                    <input
+                      type="text"
+                      name="menucode"
+                      id="menucode"
+                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      value={formData.menucode}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -377,40 +394,58 @@ export default function AddEditInventoryModal() {
                     {errors.warehouse && <p className="mt-1 text-sm text-red-600">{errors.warehouse}</p>}
                   </div>
                   <div>
-                    <label htmlFor="base_unit" className="block text-sm font-medium text-slate-700">Base Unit*</label>
-                    <select
-                      name="base_unit"
-                      id="base_unit"
-                      className={`mt-1 block w-full px-3 py-2 border ${errors.base_unit ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
-                      value={formData.base_unit}
+                    <label htmlFor="unit" className="block text-sm font-medium text-slate-700">Unit*</label>
+                    <input
+                      type="text"
+                      name="unit"
+                      id="unit"
+                      className={`mt-1 block w-full px-3 py-2 border ${errors.unit ? 'border-red-300' : 'border-slate-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm`}
+                      value={formData.unit}
                       onChange={handleInputChange}
                       required
-                    >
-                      <option value="">Select Unit</option>
-                      <option value="PCS">PCS (Pieces)</option>
-                      <option value="KG">KG (Kilograms)</option>
-                      <option value="LTR">LTR (Liters)</option>
-                      <option value="BOX">BOX (Box)</option>
-                      <option value="PKT">PKT (Packet)</option>
-                    </select>
-                    {errors.base_unit && <p className="mt-1 text-sm text-red-600">{errors.base_unit}</p>}
+                      placeholder="pcs, kg, box"
+                    />
+                    {errors.unit && <p className="mt-1 text-sm text-red-600">{errors.unit}</p>}
                   </div>
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-slate-700">Status*</label>
+                    <label htmlFor="status" className="block text-sm font-medium text-slate-700">Status</label>
                     <select
                       name="status"
                       id="status"
                       className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
                       value={formData.status}
                       onChange={handleInputChange}
-                      required
                     >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
                     </select>
                   </div>
+                  <div>
+                    <label htmlFor="isvat" className="block text-sm font-medium text-slate-700">VAT Applicable</label>
+                    <select
+                      name="isvat"
+                      id="isvat"
+                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      value={formData.isvat}
+                      onChange={handleInputChange}
+                    >
+                      <option value={0}>No</option>
+                      <option value={1}>Yes</option>
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label htmlFor="item_summary" className="block text-sm font-medium text-slate-700">Item Summary</label>
+                    <textarea
+                      name="item_summary"
+                      id="item_summary"
+                      rows={3}
+                      className="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                      value={formData.item_summary}
+                      onChange={(e) => setFormData({ ...formData, item_summary: e.target.value })}
+                    ></textarea>
+                  </div>
                 </div>
-                <div className="flex justify-end space-x-3">
+                <div className="flex justify-end space-x-3 pt-5 border-t border-slate-200">
                   <button
                     type="button"
                     className="btn-outlined px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
@@ -420,9 +455,9 @@ export default function AddEditInventoryModal() {
                   </button>
                   <button
                     type="submit"
-                    className="btn-primary"
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                   >
-                    Save
+                    {isEdit ? 'Update' : 'Create'}
                   </button>
                 </div>
               </form>

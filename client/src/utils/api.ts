@@ -56,28 +56,73 @@ export async function fetchInventoryItem(id: number): Promise<InventoryItem> {
 export async function createInventoryItem(
   item: NewInventoryItem,
 ): Promise<InventoryItem> {
+  // Convert field names to match the server's expectations
+  const convertedItem = convertInventoryItemFields(item);
+  console.log("Creating item with converted fields:", convertedItem);
+  
   const response = await fetch(`${API_BASE_URL}/inventory`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(item),
+    body: JSON.stringify(convertedItem),
   });
 
   return handleApiResponse<InventoryItem>(response, "Failed to create inventory item");
 }
 
 // Update an existing inventory item
+// Helper function to convert field names for inventory items
+function convertInventoryItemFields(item: Partial<InventoryItem>): Record<string, any> {
+  const fieldMappings: Record<string, string> = {
+    multi_itemdivision: "multi_itemdivision",
+    divisions: "DIVISIONS",
+    mcode: "MCODE",
+    menucode: "MENUCODE",
+    desca: "DESCA",
+    barcode: "BARCODE",
+    unit: "UNIT",
+    isvat: "ISVAT",
+    mrp: "MRP",
+    gst: "GST",
+    cess: "CESS",
+    gweight: "GWEIGHT",
+    nweight: "NWEIGHT",
+    mcat: "MCAT",
+    brand: "BRAND",
+    item_summary: "ITEM_SUMMARY",
+    warehouse: "WAREHOUSE",
+    stock: "STOCK",
+    status: "Status"
+  };
+
+  const convertedItem: Record<string, any> = {};
+  
+  // Convert field names using the mapping
+  Object.entries(item).forEach(([key, value]) => {
+    if (key !== 'id') { // Skip the id field
+      const mappedKey = fieldMappings[key as keyof InventoryItem] || key;
+      convertedItem[mappedKey] = value;
+    }
+  });
+  
+  return convertedItem;
+}
+
 export async function updateInventoryItem(
   id: number,
   item: Partial<InventoryItem>,
 ): Promise<InventoryItem> {
+  // Convert field names to match the server's expectations
+  const convertedItem = convertInventoryItemFields(item);
+  console.log("Updating item with converted fields:", convertedItem);
+  
   const response = await fetch(`${API_BASE_URL}/inventory/${id}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(item),
+    body: JSON.stringify(convertedItem),
   });
 
   return handleApiResponse<InventoryItem>(response, `Failed to update inventory item ${id}`);

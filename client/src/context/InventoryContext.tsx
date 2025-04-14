@@ -30,7 +30,7 @@ const defaultState: InventoryState = {
     total: 0
   },
   sorting: {
-    field: 'item_code',
+    field: 'mcode',
     direction: 'asc'
   }
 };
@@ -168,12 +168,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     try {
       setState(prev => ({ ...prev, isLoading: true, error: null }));
       const updatedItem = await api.updateInventoryItem(id, item);
-      setState(prev => ({ 
-        ...prev, 
-        items: prev.items.map(i => i.id === id ? updatedItem : i),
-        currentItem: prev.currentItem?.id === id ? updatedItem : prev.currentItem,
-        isLoading: false 
-      }));
+      console.log("Received updated item from server:", updatedItem);
+      
+      // Reload all inventory data to ensure everything is up-to-date
+      await fetchItems();
+      
       toast({
         title: "Success",
         description: "Inventory item updated successfully"
@@ -239,7 +238,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }));
       toast({
         title: "Success",
-        description: `Added ${quantity} ${updatedItem.base_unit} to inventory`
+        description: `Added ${quantity} ${updatedItem.unit || 'units'} to inventory`
       });
       closeModal();
     } catch (error) {
@@ -270,7 +269,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }));
       toast({
         title: "Success",
-        description: `Sold ${quantity} ${updatedItem.base_unit} from inventory`
+        description: `Sold ${quantity} ${updatedItem.unit || 'units'} from inventory`
       });
       closeModal();
     } catch (error) {
@@ -386,7 +385,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setCurrentItem(item);
     setConfirmationOptions({
       title: 'Delete Inventory Item',
-      message: `Are you sure you want to delete "${item.item_name}" (${item.item_code})? This action cannot be undone.`,
+      message: `Are you sure you want to delete "${item.desca}" (${item.mcode})? This action cannot be undone.`,
       onConfirm: () => deleteItem(item.id),
       confirmButtonText: 'Delete',
       confirmButtonClass: 'btn-danger'

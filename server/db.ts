@@ -178,74 +178,86 @@ export const updateInventoryItem = async (id: number, item: any) => {
       return { success: false, error: 'No fields to update' };
     }
     
-    // Use separate SQL updates for each item - less elegant but works with our SQL library
-    let result;
-    if (item.multi_itemdivision !== undefined) {
-      result = await sql`UPDATE inventory SET multi_itemdivision = ${item.multi_itemdivision} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.DIVISIONS !== undefined) {
-      result = await sql`UPDATE inventory SET "DIVISIONS" = ${item.DIVISIONS} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.MCODE !== undefined) {
-      result = await sql`UPDATE inventory SET "MCODE" = ${item.MCODE} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.MENUCODE !== undefined) {
-      result = await sql`UPDATE inventory SET "MENUCODE" = ${item.MENUCODE} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.DESCA !== undefined) {
-      result = await sql`UPDATE inventory SET "DESCA" = ${item.DESCA} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.BARCODE !== undefined) {
-      result = await sql`UPDATE inventory SET "BARCODE" = ${item.BARCODE} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.UNIT !== undefined) {
-      result = await sql`UPDATE inventory SET "UNIT" = ${item.UNIT} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.ISVAT !== undefined) {
-      result = await sql`UPDATE inventory SET "ISVAT" = ${item.ISVAT} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.MRP !== undefined) {
-      result = await sql`UPDATE inventory SET "MRP" = ${parseFloat(item.MRP)} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.GST !== undefined) {
-      result = await sql`UPDATE inventory SET "GST" = ${parseFloat(item.GST)} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.CESS !== undefined) {
-      result = await sql`UPDATE inventory SET "CESS" = ${parseFloat(item.CESS)} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.GWEIGHT !== undefined) {
-      result = await sql`UPDATE inventory SET "GWEIGHT" = ${item.GWEIGHT} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.NWEIGHT !== undefined) {
-      result = await sql`UPDATE inventory SET "NWEIGHT" = ${item.NWEIGHT} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.MCAT !== undefined) {
-      result = await sql`UPDATE inventory SET "MCAT" = ${item.MCAT} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.BRAND !== undefined) {
-      result = await sql`UPDATE inventory SET "BRAND" = ${item.BRAND} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.itemSummary !== undefined) {
-      result = await sql`UPDATE inventory SET "itemSummary" = ${item.itemSummary} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.WAREHOUSE !== undefined) {
-      result = await sql`UPDATE inventory SET "WAREHOUSE" = ${item.WAREHOUSE} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.STOCK !== undefined) {
-      result = await sql`UPDATE inventory SET "STOCK" = ${parseFloat(item.STOCK)} WHERE id = ${id} RETURNING *`;
-    }
-    if (item.Status !== undefined) {
-      result = await sql`UPDATE inventory SET "Status" = ${item.Status} WHERE id = ${id} RETURNING *`;
-    }
+    console.log(`Updating inventory item ${id} with:`, item);
     
-    // Get the latest version after all updates
-    result = await sql`SELECT * FROM inventory WHERE id = ${id}`;
+    // First get the current item to make sure it exists
+    const currentItem = await sql`SELECT * FROM inventory WHERE id = ${id}`;
     
-    if (result.length === 0) {
+    if (currentItem.length === 0) {
       return { success: false, error: 'Item not found' };
     }
     
-    return { success: true, data: result[0] };
+    // Use separate SQL updates for each item - less elegant but works with our SQL library
+    if (item.multi_itemdivision !== undefined) {
+      await sql`UPDATE inventory SET multi_itemdivision = ${item.multi_itemdivision} WHERE id = ${id}`;
+    }
+    if (item.DIVISIONS !== undefined) {
+      await sql`UPDATE inventory SET "DIVISIONS" = ${item.DIVISIONS} WHERE id = ${id}`;
+    }
+    if (item.MCODE !== undefined) {
+      await sql`UPDATE inventory SET "MCODE" = ${item.MCODE} WHERE id = ${id}`;
+    }
+    if (item.MENUCODE !== undefined) {
+      await sql`UPDATE inventory SET "MENUCODE" = ${item.MENUCODE} WHERE id = ${id}`;
+    }
+    if (item.DESCA !== undefined) {
+      await sql`UPDATE inventory SET "DESCA" = ${item.DESCA} WHERE id = ${id}`;
+    }
+    if (item.BARCODE !== undefined) {
+      await sql`UPDATE inventory SET "BARCODE" = ${item.BARCODE} WHERE id = ${id}`;
+    }
+    if (item.UNIT !== undefined) {
+      await sql`UPDATE inventory SET "UNIT" = ${item.UNIT} WHERE id = ${id}`;
+    }
+    if (item.ISVAT !== undefined) {
+      await sql`UPDATE inventory SET "ISVAT" = ${item.ISVAT} WHERE id = ${id}`;
+    }
+    if (item.MRP !== undefined) {
+      await sql`UPDATE inventory SET "MRP" = ${parseFloat(item.MRP)} WHERE id = ${id}`;
+    }
+    if (item.GST !== undefined) {
+      await sql`UPDATE inventory SET "GST" = ${parseFloat(item.GST)} WHERE id = ${id}`;
+    }
+    if (item.CESS !== undefined) {
+      await sql`UPDATE inventory SET "CESS" = ${parseFloat(item.CESS)} WHERE id = ${id}`;
+    }
+    if (item.GWEIGHT !== undefined) {
+      await sql`UPDATE inventory SET "GWEIGHT" = ${item.GWEIGHT} WHERE id = ${id}`;
+    }
+    if (item.NWEIGHT !== undefined) {
+      await sql`UPDATE inventory SET "NWEIGHT" = ${item.NWEIGHT} WHERE id = ${id}`;
+    }
+    if (item.MCAT !== undefined) {
+      await sql`UPDATE inventory SET "MCAT" = ${item.MCAT} WHERE id = ${id}`;
+    }
+    if (item.BRAND !== undefined) {
+      await sql`UPDATE inventory SET "BRAND" = ${item.BRAND} WHERE id = ${id}`;
+    }
+    if (item.ITEM_SUMMARY !== undefined) {
+      await sql`UPDATE inventory SET "itemSummary" = ${item.ITEM_SUMMARY} WHERE id = ${id}`;
+    }
+    if (item.WAREHOUSE !== undefined) {
+      await sql`UPDATE inventory SET "WAREHOUSE" = ${item.WAREHOUSE} WHERE id = ${id}`;
+    }
+    if (item.STOCK !== undefined) {
+      await sql`UPDATE inventory SET "STOCK" = ${parseFloat(item.STOCK)} WHERE id = ${id}`;
+    }
+    if (item.Status !== undefined) {
+      await sql`UPDATE inventory SET "Status" = ${item.Status} WHERE id = ${id}`;
+    }
+    
+    // Get the latest version after all updates
+    const result = await sql`SELECT * FROM inventory WHERE id = ${id}`;
+    
+    if (result.length === 0) {
+      return { success: false, error: 'Item not found after update' };
+    }
+    
+    // Ensure the ID is properly preserved
+    const updatedItem = { ...result[0], id };
+    console.log("Updated item to return:", updatedItem);
+    
+    return { success: true, data: updatedItem };
   } catch (error) {
     console.error(`Failed to update inventory item ${id}:`, error);
     return { success: false, error };

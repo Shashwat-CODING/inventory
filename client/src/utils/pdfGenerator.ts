@@ -90,9 +90,25 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
     doc.setFont('helvetica', 'bold');
     doc.text('Customer Information:', pageWidth / 2 + 8, 40);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Name: ${sale.customerName}`, pageWidth / 2 + 8, 45);
-    doc.text(`Phone: ${sale.customerPhone || 'N/A'}`, pageWidth / 2 + 8, 50);
-    doc.text(`Address: ${sale.customerAddress || 'N/A'}`, pageWidth / 2 + 8, 55);
+    
+    // Truncate customer name if too long
+    const custName = sale.customerName.length > 20 
+      ? sale.customerName.substring(0, 18) + '...' 
+      : sale.customerName;
+    doc.text(`Name: ${custName}`, pageWidth / 2 + 8, 45);
+    
+    // Truncate phone if needed
+    const phone = (sale.customerPhone && sale.customerPhone.length > 20)
+      ? sale.customerPhone.substring(0, 18) + '...'
+      : (sale.customerPhone || 'N/A');
+    doc.text(`Phone: ${phone}`, pageWidth / 2 + 8, 50);
+    
+    // Handle address - if too long, just show first part with ellipsis
+    const address = sale.customerAddress || 'N/A';
+    const showAddress = address.length > 20
+      ? address.substring(0, 18) + '...'
+      : address;
+    doc.text(`Address: ${showAddress}`, pageWidth / 2 + 8, 55);
     
     // Better formatting for table headers
     const tableStartY = 65;
@@ -102,30 +118,46 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
       // Get item name from the inventory item
       let itemName = 'Unnamed Item';
       if (item.item.desca) {
-        itemName = item.item.desca;
+        // Truncate item name if too long (max 30 chars)
+        itemName = item.item.desca.length > 30 
+          ? item.item.desca.substring(0, 28) + '...' 
+          : item.item.desca;
       } else if (item.item.hasOwnProperty('item_name') && typeof (item.item as any).item_name === 'string') {
-        itemName = (item.item as any).item_name;
+        const name = (item.item as any).item_name;
+        itemName = name.length > 30 ? name.substring(0, 28) + '...' : name;
       }
       
       // Get item code
       let itemCode = 'No Code';
       if (item.item.mcode) {
-        itemCode = item.item.mcode;
+        // Limit code length
+        itemCode = item.item.mcode.length > 10 
+          ? item.item.mcode.substring(0, 8) + '..' 
+          : item.item.mcode;
       } else if (item.item.hasOwnProperty('item_code') && typeof (item.item as any).item_code === 'string') {
-        itemCode = (item.item as any).item_code;
+        const code = (item.item as any).item_code;
+        itemCode = code.length > 10 ? code.substring(0, 8) + '..' : code;
       }
       
       // Get unit
       let unit = 'Each';
       if (item.item.unit) {
-        unit = item.item.unit;
+        // Limit unit length
+        unit = item.item.unit.length > 5 
+          ? item.item.unit.substring(0, 4) + '.' 
+          : item.item.unit;
       } else if (item.item.hasOwnProperty('base_unit') && typeof (item.item as any).base_unit === 'string') {
-        unit = (item.item as any).base_unit;
+        const baseUnit = (item.item as any).base_unit;
+        unit = baseUnit.length > 5 ? baseUnit.substring(0, 4) + '.' : baseUnit;
       }
       
       // Format price and calculate amounts properly
       const price = typeof item.price === 'string' ? parseFloat(item.price) : item.price;
       const totalPrice = typeof item.totalPrice === 'string' ? parseFloat(item.totalPrice) : item.totalPrice;
+      
+      // Add spacing to ensure proper alignment
+      const formattedPrice = '  ' + formatCurrency(price);
+      const formattedTotalPrice = '  ' + formatCurrency(totalPrice);
       
       return [
         (index + 1).toString(),
@@ -133,9 +165,9 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
         itemCode,
         item.quantity.toString(),
         unit,
-        formatCurrency(price),
+        formattedPrice,
         getDividendDisplay(item),
-        formatCurrency(totalPrice)
+        formattedTotalPrice
       ];
     });
     
@@ -143,6 +175,9 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
       startY: tableStartY,
       margin: { left: margin, right: margin },
       head: [['#', 'Item Name', 'Code', 'Qty', 'Unit', 'MRP', 'Discount', 'Total']],
+      // Remove the custom willDrawCell function since it's causing TypeScript errors
+      // We'll handle formatting in a different way
+      
       body: tableBody,
       theme: 'grid',
       headStyles: { 
@@ -155,18 +190,20 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
         cellPadding: 3
       },
       bodyStyles: {
-        fontSize: 9,
-        cellPadding: 3
+        fontSize: 9, 
+        cellPadding: 3,
+        lineColor: [200, 200, 200],
+        lineWidth: 0.1
       },
       columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 18 },
+        0: { cellWidth: 7, halign: 'center' },
+        1: { cellWidth: 55 }, // More width for item name
+        2: { cellWidth: 20, halign: 'center' },
         3: { cellWidth: 12, halign: 'center' },
-        4: { cellWidth: 15, halign: 'center' },
-        5: { cellWidth: 20, halign: 'right' },
+        4: { cellWidth: 12, halign: 'center' },
+        5: { cellWidth: 18, halign: 'right' },
         6: { cellWidth: 20, halign: 'center' },
-        7: { cellWidth: 22, halign: 'right' }
+        7: { cellWidth: 18, halign: 'right' }
       },
       alternateRowStyles: {
         fillColor: [249, 249, 249]
@@ -210,27 +247,41 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
     
     // Summary details
     doc.setFont('helvetica', 'normal');
-    doc.text('Subtotal:', pageWidth - margin - 75, finalY + 15);
-    doc.text(formatCurrency(sale.subtotal), pageWidth - margin - 5, finalY + 15, { align: 'right' });
+    // Calculate right position for consistent alignment
+    const summaryLabelX = pageWidth - margin - 75;
+    const summaryValueX = pageWidth - margin - 8; // More space from the edge
     
-    doc.text('Discount:', pageWidth - margin - 75, finalY + 22);
-    doc.text(formatCurrency(sale.totalDiscount), pageWidth - margin - 5, finalY + 22, { align: 'right' });
+    doc.text('Subtotal:', summaryLabelX, finalY + 15);
+    doc.text(formatCurrency(sale.subtotal), summaryValueX, finalY + 15, { align: 'right' });
+    
+    doc.text('Discount:', summaryLabelX, finalY + 22);
+    doc.text(formatCurrency(sale.totalDiscount), summaryValueX, finalY + 22, { align: 'right' });
     
     if (sale.totalTax > 0) {
-      doc.text('Tax:', pageWidth - margin - 75, finalY + 29);
-      doc.text(formatCurrency(sale.totalTax), pageWidth - margin - 5, finalY + 29, { align: 'right' });
+      doc.text('Tax:', summaryLabelX, finalY + 29);
+      doc.text(formatCurrency(sale.totalTax), summaryValueX, finalY + 29, { align: 'right' });
+      
+      // Add a line before grand total
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.2);
+      doc.line(summaryLabelX, finalY + 32, pageWidth - margin - 5, finalY + 32);
       
       // Total
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.text('GRAND TOTAL:', pageWidth - margin - 75, finalY + 36);
-      doc.text(formatCurrency(sale.grandTotal), pageWidth - margin - 5, finalY + 36, { align: 'right' });
+      doc.text('GRAND TOTAL:', summaryLabelX, finalY + 36);
+      doc.text(formatCurrency(sale.grandTotal), summaryValueX, finalY + 36, { align: 'right' });
     } else {
+      // Add a line before grand total
+      doc.setDrawColor(150, 150, 150);
+      doc.setLineWidth(0.2);
+      doc.line(summaryLabelX, finalY + 25, pageWidth - margin - 5, finalY + 25);
+      
       // Total without tax line
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.text('GRAND TOTAL:', pageWidth - margin - 75, finalY + 29);
-      doc.text(formatCurrency(sale.grandTotal), pageWidth - margin - 5, finalY + 29, { align: 'right' });
+      doc.text('GRAND TOTAL:', summaryLabelX, finalY + 29);
+      doc.text(formatCurrency(sale.grandTotal), summaryValueX, finalY + 29, { align: 'right' });
     }
     
     // Add notes section if present
@@ -243,14 +294,28 @@ export const generateSaleBill = (sale: Sale): jsPDF => {
       doc.text('Notes:', margin, notesY);
       doc.setFont('helvetica', 'normal');
       
+      // Limit notes length to avoid overflow problems
+      let notes = sale.notes;
+      if (notes.length > 200) {
+        notes = notes.substring(0, 197) + '...';
+      }
+      
       // Handle multi-line notes with proper wrapping
       const notesWidth = pageWidth - (2 * margin) - 90; // Leave space for the summary box
-      const splitNotes = doc.splitTextToSize(sale.notes, notesWidth);
-      doc.text(splitNotes, margin, notesY + 6);
+      const splitNotes = doc.splitTextToSize(notes, notesWidth);
+      
+      // Maximum 5 lines of notes to prevent overflow
+      const maxLines = 5;
+      const truncatedNotes = splitNotes.length > maxLines 
+        ? [...splitNotes.slice(0, maxLines - 1), '...'] 
+        : splitNotes;
+        
+      doc.text(truncatedNotes, margin, notesY + 6);
     }
     
-    // Add a thank you message
-    const thankYouY = finalY + (sale.totalTax > 0 ? 60 : 55);
+    // Position thank you message considering notes section
+    const notesExtraSpace = (sale.notes && sale.notes.trim()) ? 20 : 0;
+    const thankYouY = finalY + (sale.totalTax > 0 ? 60 : 55) + notesExtraSpace;
     doc.setFont('helvetica', 'italic');
     doc.setFontSize(10);
     doc.text('Thank you for your business!', pageWidth / 2, thankYouY, { align: 'center' });
